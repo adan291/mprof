@@ -1,4 +1,7 @@
+# bot.py
+
 import discord
+import os
 from commands import handle_register, handle_search, handle_list, handle_delete
 from database import create_db
 
@@ -42,4 +45,3 @@ class CraftingBot(discord.Client):
             await message.channel.send("**Aquí está tu backup de la base de datos:**", file=discord.File(self.db_path))
         else:
             await message.channel.send("**Error:** No se encontró la base de datos para hacer un backup.")
-
