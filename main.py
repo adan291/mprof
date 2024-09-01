@@ -1,6 +1,7 @@
 import asyncio
-from bot import CraftingBot
 import config
+from bot import CraftingBot
+
 
 async def main():
     config.Config.load_env()
@@ -8,9 +9,10 @@ async def main():
     if not token:
         raise ValueError("El token de Discord es inválido o no se cargó correctamente.")
     intents = config.Config.get_intents()
-    channel_id = 1279745595992440843  # Canal "anuncios"
+    db_path = "./data/crafters_db.sqlite"
+    channel_id = 1279745355357094003  # Canal "anuncios"
 
-    bot = CraftingBot(intents=intents, allowed_channel_id=channel_id)
+    bot = CraftingBot(intents=intents, allowed_channel_id=channel_id, db_path=db_path)
 
     try:
         # Ejecutar el bot
