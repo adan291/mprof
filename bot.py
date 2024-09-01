@@ -2,9 +2,8 @@ import discord
 import sqlite3
 import os
 
-
 class CraftingBot(discord.Client):
-    def __init__(self, intents, allowed_channel_id, db_path="crafters_db.sqlite"):
+    def __init__(self, intents, allowed_channel_id, db_path="/data/crafters_db.sqlite"):
         super().__init__(intents=intents)
         self.allowed_channel_id = allowed_channel_id
         self.db_path = db_path
@@ -12,6 +11,9 @@ class CraftingBot(discord.Client):
 
     def create_db(self):
         """Crea la base de datos y la tabla si no existen"""
+        # Asegúrate de que el directorio de la base de datos exista
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+
         if not os.path.exists(self.db_path):
             with sqlite3.connect(self.db_path) as conn:
                 c = conn.cursor()
@@ -144,7 +146,7 @@ class CraftingBot(discord.Client):
             if results:
                 response = "**Artesanos encontrados:**\n"
                 for item_name, crafters in results:
-                    crafters_list = '\n'.join(f" - {crafter}" for crafter, _ in crafters)
+                    crafters_list = '\n'.join(crafter for crafter, _ in crafters)
                     response += f"\nLos siguientes usuarios pueden craftear **[{item_name}]({crafters[0][1]})** en la categoría **{category}**:\n{crafters_list}"
                 await message.channel.send(response)
             else:
@@ -163,7 +165,7 @@ class CraftingBot(discord.Client):
         if all_crafters:
             response = "**Lista de todos los artesanos registrados:**\n\n"
             for category, item_name, item_link, crafters in all_crafters:
-                response += f"**Categoría:** {category}\n**Objeto:** [{item_name}]({item_link})\n**Artesanos:**\n - {crafters.replace(',', '\n - ')}\n\n"
+                response += f"**Categoría:** {category}\n**Objeto:** [{item_name}]({item_link})\n**Artesanos:**\n{crafters.replace(',', '\n')}\n\n"
             await message.channel.send(response)
         else:
             await message.channel.send("**No hay artesanos registrados.**")

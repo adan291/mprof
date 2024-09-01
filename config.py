@@ -10,7 +10,7 @@ class Config:
 
     @staticmethod
     def get_token():
-        return os.getenv('DISCORD_TOKEN')
+        return os.getenv('DISCORD_TOKEN_PROF')
 
     @staticmethod
     def get_intents():
