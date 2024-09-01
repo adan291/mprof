@@ -1,7 +1,6 @@
 import discord
 import sqlite3
 import os
-from discord import File
 
 
 class CraftingBot(discord.Client):
@@ -20,12 +19,13 @@ class CraftingBot(discord.Client):
                     CREATE TABLE IF NOT EXISTS crafters (
                         category TEXT,
                         item_name TEXT,
+                        item_link TEXT,
                         crafter TEXT
                     )
                 ''')
                 conn.commit()
 
-    def add_crafter(self, category, item_name, crafter):
+    def add_crafter(self, category, item_name, item_link, crafter):
         """Añade un artesano para un objeto en una categoría en la base de datos.
            Devuelve True si el artesano fue añadido, False si ya estaba registrado."""
         with sqlite3.connect(self.db_path) as conn:
@@ -37,24 +37,56 @@ class CraftingBot(discord.Client):
             ''', (category, item_name, crafter))
 
             if c.fetchone() is None:
+                # Almacena el enlace y el nombre del objeto sin dividir
                 c.execute('''
-                    INSERT INTO crafters (category, item_name, crafter)
-                    VALUES (?, ?, ?)
-                ''', (category, item_name, crafter))
+                    INSERT INTO crafters (category, item_name, item_link, crafter)
+                    VALUES (?, ?, ?, ?)
+                ''', (category, item_name, item_link, crafter))
                 conn.commit()
                 return True  # Artesano añadido
             else:
                 return False  # Artesano ya registrado
 
     def get_crafters(self, category, item_name):
-        """Obtiene los artesanos para un objeto en una categoría de la base de datos"""
+        """Obtiene los artesanos y el enlace del objeto en una categoría de la base de datos,
+           permitiendo búsquedas parciales en el nombre del objeto"""
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            # Si el nombre del objeto incluye espacios, se busca exactamente ese nombre
+            if ' ' in item_name:
+                c.execute('''
+                    SELECT crafter, item_link FROM crafters
+                    WHERE category = ? AND item_name = ?
+                ''', (category, item_name))
+                results = [(item_name, c.fetchall())]
+            else:
+                # Si el nombre del objeto es una palabra, se busca parcialmente
+                c.execute('''
+                    SELECT DISTINCT item_name FROM crafters
+                    WHERE category = ? AND item_name LIKE ?
+                ''', (category, f'%{item_name}%'))
+                item_names = c.fetchall()
+
+                results = []
+                for (item_name,) in item_names:
+                    c.execute('''
+                        SELECT crafter, item_link FROM crafters
+                        WHERE category = ? AND item_name = ?
+                    ''', (category, item_name))
+                    results.append((item_name, c.fetchall()))
+
+            return results
+
+    def list_all_crafters(self):
+        """Obtiene una lista de todos los artesanos y los objetos registrados en la base de datos"""
         with sqlite3.connect(self.db_path) as conn:
             c = conn.cursor()
             c.execute('''
-                SELECT DISTINCT crafter FROM crafters
-                WHERE category = ? AND item_name = ?
-            ''', (category, item_name))
-            return [row[0] for row in c.fetchall()]
+                SELECT category, item_name, item_link, GROUP_CONCAT(crafter, ', ') as crafters
+                FROM crafters
+                GROUP BY category, item_name, item_link
+            ''')
+            return c.fetchall()
 
     async def on_ready(self):
         print(f'Bot conectado como {self.user}')
@@ -72,21 +104,30 @@ class CraftingBot(discord.Client):
             parts = content.split(' ', 3)
             if len(parts) < 4:
                 await message.channel.send(
-                    "**Formato incorrecto.**\nEl formato correcto es: `!mprof registrar <categoria> <objeto>`")
+                    "**Formato incorrecto.**\nEl formato correcto es: `!mprof registrar <categoria> <objeto> <enlace>`")
                 return
 
-            command, category, item_name = parts[1], parts[2], parts[3]
-            category = category.strip().lower()
+            category, remainder = parts[2], parts[3]
+            item_name, item_link = remainder.rsplit(' ', 1)
             item_name = item_name.strip().lower()
+            item_link = item_link.strip()
+            category = category.strip().lower()
+
+            # Validar que el enlace sea de Wowhead
+            if not item_link.startswith("https://www.wowhead.com/"):
+                await message.channel.send(
+                    "**Enlace inválido.**\nPor favor, proporciona un enlace válido de Wowhead que comience con `https://www.wowhead.com/`.")
+                return
+
             crafter = message.author.name
 
-            added = self.add_crafter(category, item_name, crafter)
+            added = self.add_crafter(category, item_name, item_link, crafter)
             if added:
                 await message.channel.send(
-                    f"**¡Éxito!**\n{message.author.mention} ha sido registrado como artesano de **{item_name}** en la categoría **{category}**.")
+                    f"**¡Éxito!**\n{message.author.mention} ha sido registrado como artesano de **[{item_name}]({item_link})** en la categoría **{category}**.")
             else:
                 await message.channel.send(
-                    f"**¡Ya registrado!**\n{message.author.mention} ya estaba registrado como artesano de **{item_name}** en la categoría **{category}**.")
+                    f"**¡Ya registrado!**\n{message.author.mention} ya estaba registrado como artesano de **[{item_name}]({item_link})** en la categoría **{category}**.")
 
         elif content.startswith('!mprof buscar'):
             parts = content.split(' ', 3)
@@ -95,26 +136,41 @@ class CraftingBot(discord.Client):
                     "**Formato incorrecto.**\nEl formato correcto es: `!mprof buscar <categoria> <objeto>`")
                 return
 
-            command, category, item_name = parts[1], parts[2], parts[3]
+            category, item_name = parts[2], parts[3]
             category = category.strip().lower()
             item_name = item_name.strip().lower()
-            crafters = self.get_crafters(category, item_name)
+            results = self.get_crafters(category, item_name)
 
-            if crafters:
-                # Formatear la lista de artesanos
-                crafters_list = '\n'.join(f" - {crafter}" for crafter in crafters)
-                await message.channel.send(
-                    f"**Artesanos encontrados:**\nLos siguientes usuarios pueden craftear **{item_name}** en la categoría **{category}**:\n{crafters_list}")
+            if results:
+                response = "**Artesanos encontrados:**\n"
+                for item_name, crafters in results:
+                    crafters_list = '\n'.join(f" - {crafter}" for crafter, _ in crafters)
+                    response += f"\nLos siguientes usuarios pueden craftear **[{item_name}]({crafters[0][1]})** en la categoría **{category}**:\n{crafters_list}"
+                await message.channel.send(response)
             else:
                 await message.channel.send(
                     f"**No se encontraron artesanos.**\nNo hay artesanos registrados para **{item_name}** en la categoría **{category}**.")
 
+        elif content.startswith('!mprof list'):
+            await self.list_crafters(message)
+
         elif content.startswith('!mprof backup'):
-            if os.path.exists(self.db_path):
-                await message.channel.send("**Generando backup...**")
+            await self.backup_database(message)
 
-                # Enviar el archivo de la base de datos como un archivo adjunto
-                await message.channel.send(file=File(self.db_path, filename="crafters_db_backup.sqlite"))
-            else:
-                await message.channel.send("**No se encontró la base de datos.**")
+    async def list_crafters(self, message):
+        """Lista todos los crafters y objetos registrados en la base de datos"""
+        all_crafters = self.list_all_crafters()
+        if all_crafters:
+            response = "**Lista de todos los artesanos registrados:**\n\n"
+            for category, item_name, item_link, crafters in all_crafters:
+                response += f"**Categoría:** {category}\n**Objeto:** [{item_name}]({item_link})\n**Artesanos:**\n - {crafters.replace(',', '\n - ')}\n\n"
+            await message.channel.send(response)
+        else:
+            await message.channel.send("**No hay artesanos registrados.**")
 
+    async def backup_database(self, message):
+        """Envía un backup de la base de datos al canal"""
+        if os.path.exists(self.db_path):
+            await message.channel.send("**Aquí está tu backup de la base de datos:**", file=discord.File(self.db_path))
+        else:
+            await message.channel.send("**Error:** No se encontró la base de datos para hacer un backup.")
