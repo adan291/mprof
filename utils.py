@@ -5,7 +5,7 @@ VALID_CATEGORIES = [
     "alquimista",
     "herrero",
     "sastrería",
-    "ingeniería",
+    "ingenieria",
     "encantamiento",
     "joyero",
     "peletero",

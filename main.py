@@ -1,7 +1,8 @@
 import asyncio
 import config
 from bot import CraftingBot
-
+import os
+import webserver
 
 async def main():
     config.Config.load_env()
@@ -29,4 +30,5 @@ async def main():
         print("Bot cerrado correctamente.")
 
 if __name__ == "__main__":
+    webserver.keep_alive()
     asyncio.run(main())
