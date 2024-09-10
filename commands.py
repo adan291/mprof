@@ -1,5 +1,3 @@
-# commands.py
-
 import discord
 from database import add_crafter, get_crafters, list_all_crafters, delete_crafter, normalize_text
 from urllib.parse import unquote
@@ -78,7 +76,9 @@ async def handle_list(message, db_path):
     if all_crafters:
         response = "**Lista de todos los artesanos registrados:**\n\n"
         for category, item_name, item_link, crafters in all_crafters:
-            response += f"**Categoría:** {category}\n**Objeto:** [{item_name}]({item_link})\n**Artesanos:**\n - {crafters.replace(',', '\n - ')}\n\n"
+            # Asegúrate de que crafters sea una cadena o usa '\n - '.join(crafters.split(',')) si es una lista
+            crafters_list = crafters.replace(',', '\n - ')
+            response += f"**Categoría:** {category}\n**Objeto:** [{item_name}]({item_link})\n**Artesanos:**\n - {crafters_list}\n\n"
         await message.channel.send(response)
     else:
         await message.channel.send("**No hay artesanos registrados.**")
