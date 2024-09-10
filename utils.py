@@ -2,14 +2,14 @@
 
 # Lista de categorías válidas
 VALID_CATEGORIES = [
-    "alquimista",
-    "herrero",
+    "alquimia",
+    "herreria",
     "sastrería",
     "ingenieria",
     "encantamiento",
-    "joyero",
-    "peletero",
-    "inscripción",
+    "joyeria",
+    "peleteria",
+    "inscripcion",
     # Añade aquí otras categorías si es necesario
 ]
 import unicodedata

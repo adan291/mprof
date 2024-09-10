@@ -11,7 +11,7 @@ async def main():
         raise ValueError("El token de Discord es inválido o no se cargó correctamente.")
     intents = config.Config.get_intents()
     db_path = "./data/crafters_db.sqlite"
-    channel_id = 1279745355357094003  # Canal "anuncios"
+    channel_id = 1279745595992440843  # Canal "anuncios"
 
     bot = CraftingBot(intents=intents, allowed_channel_id=channel_id, db_path=db_path)
 
