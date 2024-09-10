@@ -2,13 +2,13 @@
 
 # Lista de categorías válidas
 VALID_CATEGORIES = [
-    "alquimista",
-    "herrero",
+    "alquimia",
+    "herreria",
     "sastreria",
     "ingenieria",
     "encantamiento",
-    "joyero",
-    "peletero",
+    "joyeria",
+    "peleteria",
     "inscripcion",
     # Añade aquí otras categorías si es necesario
 ]
