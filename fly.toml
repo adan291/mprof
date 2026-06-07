@@ -10,6 +10,7 @@ primary_region = 'mad'
 
 [env]
   PORT = '8081'
+  DATA_DIR = '/data'
 
 [processes]
   app = 'python main.py'

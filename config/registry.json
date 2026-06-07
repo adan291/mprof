@@ -1,0 +1,15 @@
+{
+  "nombre_entrada": "objeto",
+  "nombre_proveedor": "artesano",
+  "patron_enlace": "^https://www\\.wowhead\\.com/",
+  "categorias": [
+    "alquimia",
+    "herreria",
+    "sastreria",
+    "ingenieria",
+    "encantamiento",
+    "joyeria",
+    "peleteria",
+    "inscripcion"
+  ]
+}
